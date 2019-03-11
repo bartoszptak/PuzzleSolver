@@ -15,19 +15,16 @@ class PuzzleSolver:
 
     def get_binary_image_from_bgr(self,img):
         loc = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        loc = cv2.medianBlur(loc, ksize=3)
-        loc = cv2.threshold(loc, 60, 255, cv2.THRESH_BINARY)[1]
-        loc = cv2.dilate(loc, (5,5))
-        loc = cv2.medianBlur(loc, ksize=9)
-        return cv2.blur(loc, ksize=(3, 3))
+        loc = cv2.medianBlur(loc, ksize=5)
+        loc = cv2.threshold(loc, 110, 255, cv2.THRESH_BINARY)[1]
+        loc = cv2.dilate(loc, (15,15), iterations=5)
+        return cv2.medianBlur(loc, ksize=3)        
 
     def get_borders_from_binary(self, binary_image):
         dst = cv2.cornerHarris(np.float32(binary_image),2,3,0.04)
-        dst = cv2.dilate(dst,None)
         
         im = np.zeros((dst.shape[0], dst.shape[1]), dtype=np.uint8)
-        im[dst<0.03*np.min(dst)]=[255]
-        im[dst>0.03*np.max(dst)]=[255]
+        im[dst!=0]=[255]
         return im
 
     def calculate_lines_moments_from_borders(self, border_image):
@@ -165,13 +162,14 @@ class PuzzleSolver:
             print('prawo')
 
     def find_contours(self, image):
-        binary = self.get_binary_image_from_bgr(puzz)
+        binary = self.get_binary_image_from_bgr(image)
         border_image = self.get_borders_from_binary(binary)
         moments = self.calculate_lines_moments_from_borders(border_image)
         border_points = self.from_moments_calculate_border_points(moments)
         corners = self.from_border_points_calculate_corners(border_points)
         up_side, down_side, left_side, right_side = self.from_corners_and_borders_calculate_sides(corners, border_image)
         print(self.check_slides(up_side, down_side, left_side, right_side))
+        return up_side, down_side, left_side, right_side
 
     ### MARIAN I PAWEŁ ZONE
 
