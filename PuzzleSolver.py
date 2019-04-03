@@ -7,171 +7,34 @@ class PuzzleSolver:
     def __init__(self):
         pass
 
-    def draw(self, img):
+    #region STATIC METHODS
+    @staticmethod
+    def draw(img):
         if len(img.shape) == 3:
             plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         else:
             plt.imshow(cv2.cvtColor(img, cv2.COLOR_GRAY2RGB))
+        plt.show()
 
-    def get_binary_image_from_bgr(self,img):
-        loc = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        loc = cv2.medianBlur(loc, ksize=5)
-        loc = cv2.threshold(loc, 110, 255, cv2.THRESH_BINARY)[1]
-        loc = cv2.dilate(loc, (15,15), iterations=5)
-        return cv2.medianBlur(loc, ksize=3)        
+    @staticmethod
+    def add_padding(img, size=50, color=(255,255,255)):
+        new_im = cv2.copyMakeBorder(img, size, size, size, size, cv2.BORDER_CONSTANT, value=color)
+        return new_im
 
-    def get_borders_from_binary(self, binary_image):
-        dst = cv2.cornerHarris(np.float32(binary_image),2,3,0.04)
-        
-        im = np.zeros((dst.shape[0], dst.shape[1]), dtype=np.uint8)
-        im[dst!=0]=[255]
-        return im
+    @staticmethod
+    def get_intersect(a1, a2, b1, b2):
+        s = np.vstack([a1,a2,b1,b2])
+        h = np.hstack((s, np.ones((4, 1))))
+        l1 = np.cross(h[0], h[1])
+        l2 = np.cross(h[2], h[3])
+        x, y, z = np.cross(l1, l2)
+        if z == 0:
+            return (float('inf'), float('inf'))
+        return (x/z, y/z)
 
-    def calculate_lines_moments_from_borders(self, border_image):
-        lines = cv2.HoughLines(border_image, 0.1, np.pi/180, 100)
-        
-        li = []
-        for el in lines:
-            li.append(el[0])
+    #endregion
 
-        wyn = [[li[0]]]    
-
-        res = [li[0]]
-
-        for i in range(1, len(li)):
-            flag = False
-            for k in range(len(res)):
-                if (res[k][0]-5 < li[i][0] and li[i][0] < res[k][0]+5) and (res[k][1]-5 < li[i][1] and li[i][1] < res[k][1]+5):
-                    wyn[k].append(li[i])
-                    flag = True
-            if not flag:
-                wyn.append([li[i]])
-                res.append(li[i])
-
-        moments = []
-
-        for el in wyn:
-            a, b, c = 0, 0, 0
-            for e in el:
-                a += e[0]
-                b += e[1]
-                c += 1
-            moments.append([a/c, b/c])
-            
-        return moments
-
-    def from_moments_calculate_border_points(self, moments):
-        points = []
-
-        for el in moments:
-            rho,theta = el[0], el[1]
-            a = np.cos(theta)
-            b = np.sin(theta)
-
-            x0 = a*rho
-            y0 = b*rho
-
-            x1 = int(x0 + 1000*(-b))
-            y1 = int(y0 + 1000*(a))
-            x2 = int(x0 - 1000*(-b))
-            y2 = int(y0 - 1000*(a))
-
-            points.append([[x1,y1],[x2,y2]])
-        
-        return points
-
-    def line_intersection(self, line1, line2):
-        xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-        ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
-
-        def det(a, b):
-            return a[0] * b[1] - a[1] * b[0]
-
-        div = det(xdiff, ydiff)
-        if div == 0:
-            return None
-
-        d = (det(*line1), det(*line2))
-        x = det(d, xdiff) / div
-        y = det(d, ydiff) / div
-        return y, x
-
-    def from_border_points_calculate_corners(self, border_points):
-        corners = set()
-        for i in range(len(border_points)):
-            for k in range(len(border_points)):
-                lx = self.line_intersection(border_points[i], border_points[k])
-                if lx is not None:
-                    corners.add(lx)
-
-        corners = np.array(list(corners), dtype=np.int32)
-        return sorted(corners, key=lambda x: (x[0], x[1]), reverse=False)
-
-    def from_corners_and_borders_calculate_sides(self, corners, border_image):
-        lu = corners[0]
-        pu = corners[1]
-        ld = corners[2]
-        pd = corners[3]
-
-        cx, cy = np.int32(self.line_intersection([lu,pd],[pu,ld]))
-
-        up, down, left, right = [], [], [], []
-        padl, padr, padu, padd = 0, 0, 0, 0 
-
-        for i in range(0, cy):
-            if border_image[0, cx] != border_image[i, cx]:
-                padu = i
-                break
-
-        for i in range(border_image.shape[0]-1, cy, -1):
-            if border_image[border_image.shape[0]-1, cx] != border_image[i, cx]:
-                padd = i
-                break
-            
-        for i in range(0, cx):
-            if border_image[cy, 0] != border_image[cy, i]:
-                padl = i
-                break
-            
-        for i in range(border_image.shape[1]-1, cx, -1):
-            if border_image[cy, border_image.shape[1]-1] != border_image[cy, i]:
-                padr = i
-                break
-            
-        for i in range(border_image.shape[0]):
-            for k in range(border_image.shape[1]):
-                if border_image[i,k] != 0:
-                    if k >= lu[1]+5 and k <= pu[1]-5 and (i <= padu+5 or i <= np.mean([lu[0],pu[0]])+5):
-                        up.append([i,k])
-                    if k > ld[1]+5 and k < pd[1]-5 and (i >= padd-5 or i>=np.mean([ld[0],pd[0]])-5):
-                        down.append([i,k])
-                    if i > lu[0]+5 and i < ld[0]-5 and (k <= padl+5 or k<=np.mean([lu[1],ld[1]])+5):
-                        left.append([i,k])
-                    if i > pu[0]+5 and i < pd[0]-5 and (k >= padr-5 or k>=np.mean([pu[0],pd[0]])-5):
-                        right.append([i,k])
-        return up, down, left, right
-
-    def check_slides(self, up, down, left, right):
-        if np.std(np.array(up)[:,0]) < 5.0:
-            print('góra')
-        if np.std(np.array(down)[:,0]) < 5.0:
-            print('dół')
-        if np.std(np.array(left)[:,1]) < 5.0:
-            print('lewo')
-        if np.std(np.array(right)[:,1]) < 5.0:
-            print('prawo')
-
-    def find_contours(self, image):
-        binary = self.get_binary_image_from_bgr(image)
-        border_image = self.get_borders_from_binary(binary)
-        moments = self.calculate_lines_moments_from_borders(border_image)
-        border_points = self.from_moments_calculate_border_points(moments)
-        corners = self.from_border_points_calculate_corners(border_points)
-        up_side, down_side, left_side, right_side = self.from_corners_and_borders_calculate_sides(corners, border_image)
-        print(self.check_slides(up_side, down_side, left_side, right_side))
-        return up_side, down_side, left_side, right_side
-
-    ### MARIAN I PAWEŁ ZONE
+    #region SPLIT PUZZLES
 
     def remove_holes(self, img):
         im_in = img
@@ -210,40 +73,159 @@ class PuzzleSolver:
         closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
         im2, cnts, hierarchy = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE, )
 
-        print("Found %d objects." % len(cnts))
-
         return cnts
-
-    def add_padding(self, img, size=256):
-        new_im = cv2.copyMakeBorder(img, 50, 50, 50, 50, cv2.BORDER_CONSTANT, None)
-        return new_im
 
     def find_distinct_puzzles(self, img, cnts):
         col = 0
         row = 0
+        padd = 20
+
         if len(cnts) % 2 == 0:
             col = 2
             row = int(len(cnts) / 2)
         else:
             col = 1
             row = len(cnts)
-        fig = plt.figure(figsize=(12, 12))
+
+        images = []
         for i in range(1, col * row + 1):
-            fig.add_subplot(row, col, i)
             x, y, w, h = cv2.boundingRect(cnts[i - 1])
             if (w > 50 and h > 50):
-                new_img = img[y:y + h, x:x + w]
-            else:
-                new_img = np.zeros([50, 50], dtype="uint8")
-            plt.imshow(new_img)
-            # draw(add_padding(new_img))
-            self.draw(new_img)
+                images.append(img[y-padd:y + h+padd, x-padd:x + w+padd])
 
-        plt.show()
+        return images
 
     def split_puzzles_from_image(self, img):
         cnts = self.find_objects(img)
-        self.find_distinct_puzzles(img, cnts)
+        return self.find_distinct_puzzles(img, cnts)
+
+    #endregion
+
+
+    #region TRANSFORM PUZZLES
+
+    def get_binary_image_from_bgr(self, img):
+        blur = cv2.GaussianBlur(img, (7, 7), 2)
+        h, w = img.shape[:2]
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+        gradient = cv2.morphologyEx(blur, cv2.MORPH_GRADIENT, kernel)
+        lowerb = np.array([0, 0, 0])
+        upperb = np.array([15, 15, 15])
+        binary =  cv2.inRange(gradient, lowerb, upperb)
+        binary = self.add_padding(binary)
+
+        kern = np.ones((5, 5), np.uint8)
+        test = self.remove_holes(binary)
+
+        erosion = cv2.erode(test, kern, iterations=3)
+        return cv2.dilate(erosion, kern, iterations=1)
+
+    def get_borders_from_binary(self, binary_image):
+        dst = cv2.cornerHarris(np.float32(binary_image),2,3,0.04)
+
+        im = np.zeros((dst.shape[0], dst.shape[1]), dtype=np.uint8)
+        im[dst!=0]=[255]
+        return cv2.medianBlur(im, 5)
+    
+    def get_HoughLines_from_binary(self, a):
+        HoughLines = cv2.HoughLines(a, 1, np.pi / 180, 105)
+
+        lines = []
+        for line in HoughLines:
+            for rho,theta in line:
+                a = np.cos(theta)
+                b = np.sin(theta)
+                x0 = a*rho
+                y0 = b*rho
+                x1 = int(x0 + 500*(-b))
+                y1 = int(y0 + 500*(a))
+                x2 = int(x0 - 500*(-b))
+                y2 = int(y0 - 500*(a))
+
+                lines.append([x1,y1,x2,y2])                
+        return lines
+
+    def check_quadrant(self, el, shape, reku=10):
+        x1, y1, x2, y2 = el[0], el[1], el[2], el[3]
+        h, w = shape[0]/2, shape[1]/2
+        
+        if (x1>w and y1<h and x2>w and y2>h) or (x2>w and y2<h and x1>w and y1>h):
+            return 0
+        elif (x1<w and y1<h and x2<w and y2>h) or (x2<w and y2<h and x1<w and y1>h):
+            return 1
+        elif (x1<w and y1<h and x2>w and y2<h) or (x2<w and y2<h and x1>w and y1<h):
+            return 2
+        elif (x1<w and y1>h and x2>w and y2>h) or (x2<w and y2>h and x1>w and y1>h):
+            return 3
+        else:
+            if y1<0 and x1>0 and x2>0 and y2>0:
+                return 0
+            return 4
+
+    def get_centroids_from_lines(self, lines, shape):
+        kmeans = []
+        for el in lines:
+            kmeans.append(self.check_quadrant(el, shape))
+        
+        dictionary = dict()
+        dictionary[0], dictionary[1], dictionary[2], dictionary[3], dictionary[4] = list(), list(), list(), list(), list()
+
+        for index, row in enumerate(np.array(lines)):
+            dictionary[kmeans[index]].append(row)
+            
+        for el in dictionary[0]:
+            if el[1] < 0:
+                el[0], el[2] = el[2], el[0]
+                el[1], el[3] = el[3], el[1]
+        
+        for el in dictionary[1]:
+            if el[1] > 0:
+                el[0], el[2] = el[2], el[0]
+                el[1], el[3] = el[3], el[1]
+        
+        for el in dictionary[2]:
+            if el[0] < 0:
+                el[0], el[2] = el[2], el[0]
+                el[1], el[3] = el[3], el[1]
+                
+        for el in dictionary[3]:
+            if el[0] > 0:
+                el[0], el[2] = el[2], el[0]
+                el[1], el[3] = el[3], el[1]
+                
+        return [np.nanmean(dictionary[0], axis=0).astype('int'),np.nanmean(dictionary[1], axis=0).astype('int'),
+            np.nanmean(dictionary[2], axis=0).astype('int'),np.nanmean(dictionary[3], axis=0).astype('int')]
+
+    def from_centroids_get_lines(self, c, im):
+        points = []
+        for i in range(4):
+            for k in range(i, 4):
+                inter = self.get_intersect((c[i][0], c[i][1]), (c[i][2], c[i][3]), (c[k][0], c[k][1]), (c[k][2], c[k][3]))
+                if not np.isinf(inter[0]) and im.shape[1] > inter[0] > 0 and im.shape[0] > inter[1] > 0:
+                    points.append(inter)
+
+        return np.array(points)
+
+    def four_point_transform(self, im, pts_src):
+        pts_dst = np.array([[200,200],[800, 200],[ 200,800],[800, 800]])
+
+        im_dst = np.full((1000, 1000, 3), 255, np.uint8)
+
+        h, status = cv2.findHomography(pts_src, pts_dst)
+
+        return cv2.warpPerspective(im, h, (im_dst.shape[1],im_dst.shape[0]), borderValue=(255,255,255))
+
+    #endregion
+
+    def get_transform_image(self, img):
+        binary = self.get_binary_image_from_bgr(img)
+        im = np.copy(self.add_padding(img))
+        borders = self.get_borders_from_binary(binary)
+        lines = self.get_HoughLines_from_binary(borders)
+        c = self.get_centroids_from_lines(lines, im.shape)
+        points = self.from_centroids_get_lines(c, im)
+    
+        return self.four_point_transform(im, points)
 
 if __name__ == '__main__':
     ps = PuzzleSolver()
