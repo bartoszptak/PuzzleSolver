@@ -209,11 +209,11 @@ class PuzzleSolver:
     def four_point_transform(self, im, pts_src):
         pts_dst = np.array([[200,200],[800, 200],[ 200,800],[800, 800]])
 
-        im_dst = np.full((1000, 1000, 3), 255, np.uint8)
+        im_dst = np.full((1000, 1000, 3), 0, np.uint8)
 
         h, status = cv2.findHomography(pts_src, pts_dst)
 
-        return cv2.warpPerspective(im, h, (im_dst.shape[1],im_dst.shape[0]), borderValue=(255,255,255))
+        return cv2.warpPerspective(im, h, (im_dst.shape[1],im_dst.shape[0]), borderValue=(0,0,0))
 
     #endregion
 
@@ -225,7 +225,7 @@ class PuzzleSolver:
         c = self.get_centroids_from_lines(lines, im.shape)
         points = self.from_centroids_get_lines(c, im)
     
-        return self.four_point_transform(im, points)
+        return self.four_point_transform(im, points), self.four_point_transform(borders, points)
 
 if __name__ == '__main__':
     ps = PuzzleSolver()
