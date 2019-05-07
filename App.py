@@ -23,6 +23,7 @@ game_display.fill(COLOR_WHITE)
 
 game_exit = False
 
+
 def get_path():
     app = wx.App(None)
     style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE 
@@ -44,11 +45,9 @@ def image_button():
 
     pygame.draw.rect(game_display, COLOR_BLACK, pygame.Rect(x, y, width, height))
     game_display.blit(font_button.render('Select image(s)', False, COLOR_WHITE), (int(SIZE_WIDTH/2)-100+34,int(SIZE_HEIGHT/2)-30+18))
-    
-
-
 
 while not game_exit:
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             game_exit = True
@@ -64,7 +63,9 @@ while not game_exit:
                     paths = get_path()
                     if paths is not None:
                         print(paths)
-                        ## TO DO: wszystko tu się musi wykonać 
+                        ## TO DO: wszystko tu się musi wykonać
+
+
 
 
     game_display.fill(COLOR_WHITE)
