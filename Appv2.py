@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 from PIL import ImageTk, Image
 import wx
+import time
 
 COLOR_WHITE = (247,247,247)
 COLOR_BLACK = (59,89,152)
@@ -13,24 +14,61 @@ SIZE_HEIGHT = 400
 
 
 class ResultsWindow:
+    counter = 0
     def __init__(self, master, images):
-        self.images = images
+        self.images = ['img/puchatek_r_0.png', 'img/puchatek_r_1.png']
         self.master = master
         self.frame = Frame(self.master)
-        # img = Image.open(self.images[0])
-        # img.thumbnail((SIZE_WIDTH-10, SIZE_HEIGHT-10), Image.ANTIALIAS)
-        # img = ImageTk.PhotoImage(img)
-        # panel = Label(self.frame, image=img)
-        # panel.pack(side="bottom", fill="both", expand="yes")
-        img = ImageTk.PhotoImage(Image.open(images[0]))
-        label = Label(self.frame, image=img).pack()
+        next_button = Button(self.frame, text='Next image', command=self.next_image)
+        previous_button = Button(self.frame, text='Previous image', command=self.previous_image)
+        solve_button = Button(self.frame, text='Solve', command=self.solve)
+
+
+
+        img = Image.open(self.images[self.counter])
+        img.thumbnail((SIZE_WIDTH-10, SIZE_HEIGHT-40), Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(img)
+        self.panel = Label(self.frame, image=img)
+        self.panel.grid(row=0, columnspan=3, sticky=SW)
+
+        next_button.grid(row=1, column=2)
+        previous_button.grid(row=1, column=0)
+        solve_button.grid(row=1, column=1)
         self.frame.pack()
+        self.frame.mainloop()
 
-        # on exit
-        # UI.root.deiconify()
 
+    def set_image(self):
+        img = Image.open(self.images[self.counter])
+        img.thumbnail((SIZE_WIDTH - 10, SIZE_HEIGHT - 40), Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(img)
+        self.panel.configure(image=img)
+        self.panel.image = img
+
+    def next_image(self):
+        self.counter+=1
+        if self.counter > len(self.images)-1:
+            self.counter = 0
+        self.set_image()
+        return
+    def previous_image(self):
+        self.counter-=1
+        if self.counter < 0:
+            self.counter = len(self.images)-1
+        self.set_image()
+        return
+    def solve(self):
+        time.sleep(2)
+        messagebox.showinfo('Success', 'PUZZLE SOLVED!')
+        self.images.append('img/puchatek_r.png')
+        self.counter = len(self.images)-1
+        self.set_image()
+        return
 
 class UI:
+    def test(self):
+        self.newWindow.grab_release()
+        self.newWindow.destroy()
 
     root = Tk()
     def __init__(self):
@@ -53,12 +91,13 @@ class UI:
         self.root.mainloop()
 
     def show_results_window(self, master, images):
-        self.root.withdraw()
         self.newWindow = Toplevel(master)
-        self.newWindow.winfo_toplevel().title('Puzzle Solver Results')
+        self.newWindow.winfo_toplevel().title('Puzzle Solver - Puzzle Pieces Preview')
         self.newWindow.maxsize(SIZE_WIDTH, SIZE_HEIGHT)
         self.newWindow.minsize(SIZE_WIDTH, SIZE_HEIGHT)
         self.newWindow.resizable(0, 0)
+        self.newWindow.grab_set()
+        self.newWindow.protocol("WM_DELETE_WINDOW", self.test)
         self.app = ResultsWindow(self.newWindow, images)
 
     def load_images(self):
@@ -68,12 +107,14 @@ class UI:
         dialog = wx.FileDialog(None, 'Open', wildcard=wildcard, style=style)
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPaths()
+            messagebox.showinfo('Info', 'Loaded images!')
+            self.show_results_window(self.root, path)
         else:
             path = None
+            messagebox.showinfo('Error', 'Load images first!')
         dialog.Destroy()
 
-        messagebox.showinfo('Info', 'Loaded images!')
-        self.show_results_window(self.root, path)
+
 
 
 if __name__ == "__main__":
