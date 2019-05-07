@@ -1,80 +1,137 @@
-import pygame
+from tkinter import *
+from tkinter import messagebox
+from PIL import ImageTk, Image
 import wx
+import time
 
-COLOR_WHITE = (247,247,247)
-COLOR_BLACK = (59,89,152)
+COLOR_WHITE = (247, 247, 247)
+COLOR_BLACK = (59, 89, 152)
 COLOR_BLUE = (0, 0, 255)
 COLOR_RED = (255, 0, 0)
 
 SIZE_WIDTH = 650
 SIZE_HEIGHT = 400
 
-x = pygame.init()
-pygame.font.init()
 
-FONT = 'Microsoft Sans Serif'
-font_header = pygame.font.SysFont(FONT, 45)
-font_footer = pygame.font.SysFont(FONT, 16)
-font_button = pygame.font.SysFont(FONT, 20)
+class ResultsWindow:
+    counter = 0
+    solved = False
 
-game_display = pygame.display.set_mode((SIZE_WIDTH,SIZE_HEIGHT))
-pygame.display.set_caption('Puzzle Solver')
-game_display.fill(COLOR_WHITE)
+    def __init__(self, master, images):
+        self.images = ['img/puchatek_r_0.png', 'img/puchatek_r_1.png']
+        self.master = master
+        self.frame = Frame(self.master)
+        next_button = Button(self.frame, text='Next image', command=self.next_image)
+        previous_button = Button(self.frame, text='Previous image', command=self.previous_image)
+        solve_button = Button(self.frame, text='Solve', command=self.solve)
 
-game_exit = False
+        img = Image.open(self.images[self.counter])
+        img.thumbnail((SIZE_WIDTH - 10, SIZE_HEIGHT - 40), Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(img)
+        self.panel = Label(self.frame, image=img)
+        self.panel.grid(row=0, columnspan=3, sticky=SW)
 
+        next_button.grid(row=1, column=2)
+        previous_button.grid(row=1, column=0)
+        solve_button.grid(row=1, column=1)
+        self.frame.pack()
+        self.frame.mainloop()
 
-def get_path():
-    app = wx.App(None)
-    style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE 
-    wildcard = "Image files (*.png,*.bmp;*.gif;*.jpg)|*.png;*.bmp;*.gif;*.jpg"
-    dialog = wx.FileDialog(None, 'Open', wildcard=wildcard, style=style)
-    if dialog.ShowModal() == wx.ID_OK:
-        path = dialog.GetPaths()
-    else:
-        path = None
-    dialog.Destroy()
-    return path
+    def set_image(self):
+        img = Image.open(self.images[self.counter])
+        img.thumbnail((SIZE_WIDTH - 10, SIZE_HEIGHT - 40), Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(img)
+        self.panel.configure(image=img)
+        self.panel.image = img
 
+    def next_image(self):
+        self.counter += 1
+        if self.counter > len(self.images) - 1:
+            self.counter = 0
+        self.set_image()
 
-def image_button():
-    x = int(SIZE_WIDTH/2)-100
-    y = int(SIZE_HEIGHT/2)-30
-    width = 200
-    height = 60
+    def previous_image(self):
+        self.counter -= 1
+        if self.counter < 0:
+            self.counter = len(self.images) - 1
+        self.set_image()
 
-    pygame.draw.rect(game_display, COLOR_BLACK, pygame.Rect(x, y, width, height))
-    game_display.blit(font_button.render('Select image(s)', False, COLOR_WHITE), (int(SIZE_WIDTH/2)-100+34,int(SIZE_HEIGHT/2)-30+18))
-
-while not game_exit:
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            game_exit = True
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            button_click = pygame.mouse.get_pressed()
-            mouse_pos = pygame.mouse.get_pos()
-            x = int(SIZE_WIDTH/2)-100
-            y = int(SIZE_HEIGHT/2)-30
-            width = 200
-            height = 60
-            if x + width > mouse_pos[0] > x and y + height > mouse_pos[1] > y:
-                if button_click[0] == 1:
-                    paths = get_path()
-                    if paths is not None:
-                        print(paths)
-                        ## TO DO: wszystko tu się musi wykonać
+    def solve(self):
+        if self.solved:
+            return
+        time.sleep(2)
+        messagebox.showinfo('Success', 'PUZZLE SOLVED!')
+        self.images.append('img/puchatek_r.png')
+        self.counter = len(self.images) - 1
+        self.set_image()
+        self.solved = True
 
 
+class UI:
+    def test(self):
+        self.newWindow.grab_release()
+        self.newWindow.destroy()
+
+    root = Tk()
+
+    def __init__(self):
+
+        self.root.maxsize(SIZE_WIDTH, SIZE_HEIGHT)
+        self.root.minsize(SIZE_WIDTH, SIZE_HEIGHT)
+        self.root.resizable(0, 0)
+        self.root.winfo_toplevel().title('Puzzle Solver')
+        FONT = 'Microsoft Sans Serif'
+        font_header = (FONT, 45)
+        font_footer = (FONT, 10)
+        header = Label(self.root, text='Puzzle Solver', font=font_header)
+        footer = Label(self.root, text='by Przybylowski Paweł, Ptak Bartosz, Walkowiak Mikolaj', font=font_footer)
+        header.pack()
+        footer.place(x=10, y=375)
+
+        load_images_button = Button(self.root, text='Select image(s)', command=self.load_images, width=50, height=5)
+        load_images_button.place(x=145, y=150)
+
+        self.root.mainloop()
+
+    def show_results_window(self, master, images):
+        self.newWindow = Toplevel(master)
+        self.newWindow.winfo_toplevel().title('Puzzle Solver - Puzzle Pieces Preview')
+        self.newWindow.maxsize(SIZE_WIDTH, SIZE_HEIGHT)
+        self.newWindow.minsize(SIZE_WIDTH, SIZE_HEIGHT)
+        self.newWindow.resizable(0, 0)
+        self.newWindow.grab_set()
+        self.newWindow.protocol("WM_DELETE_WINDOW", self.test)
+        self.app = ResultsWindow(self.newWindow, images)
+
+    def load_images(self):
+        app = wx.App(None)
+        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE
+        wildcard = "Image files (*.png,*.bmp;*.gif;*.jpg)|*.png;*.bmp;*.gif;*.jpg"
+        dialog = wx.FileDialog(None, 'Open', wildcard=wildcard, style=style)
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.GetPaths()
+            messagebox.showinfo('Info', 'Loaded images!')
+            self.show_results_window(self.root, path)
+        else:
+            path = None
+            messagebox.showinfo('Error', 'Load images first!')
+        dialog.Destroy()
 
 
-    game_display.fill(COLOR_WHITE)
-    game_display.blit(font_header.render('Puzzle Solver', False, COLOR_BLACK), (int(SIZE_WIDTH/2)-130,20))
-
-    image_button()
-    
-    game_display.blit(font_footer.render('by Przybyłowski Paweł, Ptak Bartosz, Walkowiak Mikołaj', False, COLOR_BLACK), (10,SIZE_HEIGHT-25))
-    pygame.display.update()
-
-pygame.quit()
-quit()
+if __name__ == "__main__":
+    UI()
+# class ResultsDisplay:
+#     def __init__(self, images):
+#         for image in images:
+#             results_display = Tk()
+#             results_display.maxsize(SIZE_WIDTH, SIZE_HEIGHT)
+#             results_display.minsize(SIZE_WIDTH, SIZE_HEIGHT)
+#             results_display.resizable(0, 0)
+#             results_display.winfo_toplevel().title('Puzzle Solver Results')
+#
+#             img = Image.open(image)
+#             img.thumbnail((SIZE_WIDTH-10, SIZE_HEIGHT-10), Image.ANTIALIAS)
+#             img = ImageTk.PhotoImage(img)
+#             panel = Label(results_display, image=img)
+#             panel.pack(side="bottom", fill="both", expand="yes")
+#             results_display.mainloop()
