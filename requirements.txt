@@ -1,0 +1,5 @@
+matplotlib==3.0.3
+numpy==1.14.0
+opencv-python==3.4.1.15
+Pillow==4.0.0
+wxPython==4.0.0
