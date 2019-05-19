@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
+from tkinter import filedialog
 from PIL import ImageTk, Image
 import wx
 import time
@@ -104,18 +105,10 @@ class UI:
         self.app = ResultsWindow(self.newWindow, images)
 
     def load_images(self):
-        app = wx.App(None)
-        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE
-        wildcard = "Image files (*.png,*.bmp;*.gif;*.jpg)|*.png;*.bmp;*.gif;*.jpg"
-        dialog = wx.FileDialog(None, 'Open', wildcard=wildcard, style=style)
-        if dialog.ShowModal() == wx.ID_OK:
-            path = dialog.GetPaths()
+        files = list(filedialog.askopenfilenames(parent=self.root, title='Choose image file(s)', filetypes=(("All files", "*.*"), ("PNG", "*.png"), ("JPG", "*.jpg"), ("Bitmap", "*.bmp"))))
+        if len(files) != 0:
             messagebox.showinfo('Info', 'Loaded images!')
-            self.show_results_window(self.root, path)
-        else:
-            path = None
-            messagebox.showinfo('Error', 'Load images first!')
-        dialog.Destroy()
+            self.show_results_window(self.root, files)
 
 
 if __name__ == "__main__":
