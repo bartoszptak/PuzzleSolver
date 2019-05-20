@@ -2,8 +2,6 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import filedialog
 from PIL import ImageTk, Image
-import wx
-import time
 
 COLOR_WHITE = (247, 247, 247)
 COLOR_BLACK = (59, 89, 152)
@@ -60,7 +58,7 @@ class ResultsWindow:
     def solve(self):
         if self.solved:
             return
-        time.sleep(2)
+      
         messagebox.showinfo('Success', 'PUZZLE SOLVED!')
         self.images.append('img/puchatek_r.png')
         self.counter = len(self.images) - 1
