@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class PuzzleSolver:
+class Preprocessing:
     def __init__(self):
         pass
 
@@ -216,8 +216,6 @@ class PuzzleSolver:
 
         return cv2.warpPerspective(im, h, (im_dst.shape[1], im_dst.shape[0]), borderValue=(0, 0, 0))
 
-    # endregion
-
     def get_transform_image(self, img):
         binary = self.get_binary_image_from_bgr(img)
         im = np.copy(self.add_padding(img))
@@ -226,15 +224,194 @@ class PuzzleSolver:
         c = self.get_centroids_from_lines(lines, im.shape)
         points = self.from_centroids_get_lines(c, im)
 
-        return self.four_point_transform(im, points), self.four_point_transform(binary, points)
+        return self.four_point_transform(im, points), self.four_point_transform(binary, points), self.four_point_transform(borders, points)
+
+    # endregion
+
+    # region GET SLIDES PUZZLES
+
+    @staticmethod
+    def line_intersection(line1, line2):
+        xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+        ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+
+        def det(a, b):
+            return a[0] * b[1] - a[1] * b[0]
+
+        div = det(xdiff, ydiff)
+        if div == 0:
+            return None
+
+        d = (det(*line1), det(*line2))
+        x = det(d, xdiff) / div
+        y = det(d, ydiff) / div
+        return y, x
+
+    @staticmethod
+    def check_mountain(border_image, i, where):
+        if where=='up':
+            if border_image[i,500] == 255 or border_image[i,450] == 255 or border_image[i,550] == 255:
+                if i < 190 or i > 210:
+                    return True
+        elif where=='down':
+            if border_image[i,500] == 255 or border_image[i,450] == 255 or border_image[i,550] == 255:
+                if i < 790 or i > 810:
+                    return True
+        elif where=='left':
+            if border_image[500,i] == 255 or border_image[450,i] == 255 or border_image[550,i] == 255:
+                if i < 190 or i > 210:
+                    return True
+        elif where=='right':
+            if border_image[500,i] == 255 or border_image[450,i] == 255 or border_image[550,i] == 255:
+                if i < 790 or i > 810:
+                    return True
+        return False
+
+    def get_upper(self, border_image):    
+        up_points = []
+        up = None
+        for i in range(500,0,-1):
+            if self.check_mountain(border_image, i, 'up'):
+                up = (i,500)
+                break
+        if up is None:
+            up = (200,500)
+            
+        if up[0] > 210:
+            for i in range(300,700,1):
+                for j in range(180,up[0]+15,1):
+                    if border_image[j,i]==255:
+                        up_points.append((j,i))                    
+        elif up[0] < 190:
+            for i in range(300,700,1):
+                for j in range(0,210,1):
+                    if border_image[j,i]==255:
+                        up_points.append((j,i)) 
+
+        for i in range(180,820,1):
+            for j in range(180,210,1):
+                if border_image[j,i]==255:
+                    up_points.append((j,i))
+                
+        return up_points, np.std(np.array(up_points)[:,0]) < 5.0
+
+    def get_downer(self, border_image):    
+        down_points = []
+        down = None
+        for i in range(500,1000,1):
+            if self.check_mountain(border_image, i, 'down'):
+                down = (i,500)
+                break
+        if down is None:
+            down = (800,500)
+            
+        if down[0] < 790:
+            for i in range(300,700,1):
+                for j in range(down[0]-15,820,1):
+                    if border_image[j,i]==255:
+                        down_points.append((j,i)) 
+                        
+        elif down[0] > 810:
+            for i in range(300,700,1):
+                for j in range(790,1000,1):
+                    if border_image[j,i]==255:
+                        down_points.append((j,i)) 
+
+        for i in range(180,820,1):
+            for j in range(790,820,1):
+                if border_image[j,i]==255:
+                    down_points.append((j,i))
+                
+        return down_points, np.std(np.array(down_points)[:,0]) < 5.0
+    
+    def get_lefter(self, border_image):    
+        left_points = []
+        left = None
+        for i in range(500,0,-1):
+            if self.check_mountain(border_image, i, 'left'):
+                left = (500,i)
+                break
+        if left is None:
+            left = (500,200)
+                
+        if left[1] > 210:
+            for i in range(300,700,1):
+                for j in range(180,left[1]+15,1):
+                    if border_image[i,j]==255:
+                        left_points.append((i,j))                    
+        elif left[1] < 190:
+            for i in range(300,700,1):
+                for j in range(0,210,1):
+                    if border_image[i,j]==255:
+                        left_points.append((i,j)) 
+
+        for i in range(180,820,1):
+            for j in range(180,210,1):
+                if border_image[i,j]==255:
+                    left_points.append((i,j))
+                
+        return left_points, np.std(np.array(left_points)[:,1]) < 5.0
+
+    def get_righter(self, border_image):    
+        right_points = []
+        right = None
+        for i in range(500,1000,1):
+            if self.check_mountain(border_image, i, 'right'):
+                right = (500,i)
+                break
+        if right is None:
+            right = (500,800)
+        
+        if right[1] < 790:
+            for i in range(300,700,1):
+                for j in range(right[1]-15,820,1):
+                    if border_image[i,j]==255:
+                        right_points.append((i,j)) 
+        elif right[1] > 810:
+            for i in range(300,700,1):
+                for j in range(790,1000,1):
+                    if border_image[i,j]==255:
+                        right_points.append((i,j)) 
+
+        for i in range(180,820,1):
+            for j in range(790,820,1):
+                if border_image[i,j]==255:
+                    right_points.append((i,j))
+                
+        return right_points, np.std(np.array(right_points)[:,1]) < 5.0
+
+    def get_slides(self, splited, results):
+        white = np.zeros((1000,1000,3), np.uint8)
+        white[:] = (255,255,255)
+        for i, im in enumerate(splited):
+            color, binary, border = self.get_transform_image(im)
+        
+            up, upT = self.get_upper(border)
+            down, downT = self.get_downer(border)
+            left, leftT = self.get_lefter(border)
+            right, rightT = self.get_righter(border)
+            
+            b = binary.astype('bool')
+            color[~b] = white[~b]
+
+            results.append([[color, binary, border], [up,down,left,right], [upT,downT,leftT,rightT]])
+
+
+    # endregion
+
+    def do_it(self, files):
+        print('Files: {}'.format(len(files)))
+        results = []
+        for file in files:
+            img = cv2.imread(file)
+            splited = self.split_puzzles_from_image(img)
+            self.get_slides(splited, results)
+        
+        return results
 
 
 if __name__ == '__main__':
-    ps = PuzzleSolver()
+    ps = Preprocessing()
 
-    img = cv2.imread('img/pawel1.jpg')
-
-    # ps.split_puzzles_from_image(img)
-
-    # puzz = img[0:285, 650:900]
-    # ps.find_contours(puzz)
+    images = ['img/marian_0.jpg', 'img/marian_1.jpg']
+    print('Puzzles: {}'.format(len(ps.do_it(images))))
