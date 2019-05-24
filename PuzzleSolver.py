@@ -127,7 +127,7 @@ class PuzzleSolver:
         return cv2.medianBlur(im, 5)
 
     def get_HoughLines_from_binary(self, a):
-        HoughLines = cv2.HoughLines(a, 1, np.pi / 180, 105)
+        HoughLines = cv2.HoughLines(a, 1, np.pi / 180, 80)
 
         lines = []
         for line in HoughLines:
@@ -226,7 +226,7 @@ class PuzzleSolver:
         c = self.get_centroids_from_lines(lines, im.shape)
         points = self.from_centroids_get_lines(c, im)
 
-        return self.four_point_transform(im, points), self.four_point_transform(borders, points)
+        return self.four_point_transform(im, points), self.four_point_transform(binary, points)
 
 
 if __name__ == '__main__':
