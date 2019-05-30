@@ -293,7 +293,7 @@ class Preprocessing:
                 if border_image[j,i]==255:
                     up_points.append((j,i))
                 
-        return up_points, np.std(np.array(up_points)[:,0]) < 5.0
+        return np.array(up_points)
 
     def get_downer(self, border_image):    
         down_points = []
@@ -322,7 +322,7 @@ class Preprocessing:
                 if border_image[j,i]==255:
                     down_points.append((j,i))
                 
-        return down_points, np.std(np.array(down_points)[:,0]) < 5.0
+        return np.array(down_points)
     
     def get_lefter(self, border_image):    
         left_points = []
@@ -350,7 +350,7 @@ class Preprocessing:
                 if border_image[i,j]==255:
                     left_points.append((i,j))
                 
-        return left_points, np.std(np.array(left_points)[:,1]) < 5.0
+        return np.array(left_points)
 
     def get_righter(self, border_image):    
         right_points = []
@@ -378,23 +378,26 @@ class Preprocessing:
                 if border_image[i,j]==255:
                     right_points.append((i,j))
                 
-        return right_points, np.std(np.array(right_points)[:,1]) < 5.0
+        return np.array(right_points)
 
     def get_slides(self, splited, results):
         white = np.zeros((1000,1000,3), np.uint8)
         white[:] = (255,255,255)
         for i, im in enumerate(splited):
-            color, binary, border = self.get_transform_image(im)
-        
-            up, upT = self.get_upper(border)
-            down, downT = self.get_downer(border)
-            left, leftT = self.get_lefter(border)
-            right, rightT = self.get_righter(border)
+            try:
+                color, binary, border = self.get_transform_image(im)
             
-            b = binary.astype('bool')
-            color[~b] = white[~b]
+                up = self.get_upper(border)
+                down = self.get_downer(border)
+                left = self.get_lefter(border)
+                right = self.get_righter(border)
+                
+                b = binary.astype('bool')
+                color[~b] = white[~b]
 
-            results.append([[color, binary, border], [up,down,left,right], [upT,downT,leftT,rightT]])
+                results.append([[color, binary, border], [up,down,left,right]])
+            except:
+                self.draw(im)
 
 
     # endregion
