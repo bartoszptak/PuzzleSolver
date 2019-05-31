@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
+import Solver
 
 class Preprocessing:
     def __init__(self):
@@ -415,6 +415,7 @@ class Preprocessing:
 
 if __name__ == '__main__':
     ps = Preprocessing()
-
+    solver = Solver.Solver()
     images = ['img/marian_0.jpg', 'img/marian_1.jpg']
-    print('Puzzles: {}'.format(len(ps.do_it(images))))
+    solver.load(images)
+    print('Puzzles: {}'.format(len(solver.solve())))
